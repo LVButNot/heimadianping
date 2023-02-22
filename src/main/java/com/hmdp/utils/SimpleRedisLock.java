@@ -12,6 +12,9 @@ import org.yaml.snakeyaml.events.Event;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * @author Program Monkey
+ */
 public class SimpleRedisLock implements ILock{
     private String name;
     private static final String KEY_PREFIX = "lock:";

@@ -10,12 +10,15 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import static com.hmdp.utils.RedisConstants.*;
+import static java.util.concurrent.Executors.*;
 
+/**
+ * @author Program Monkey
+ */
 @Slf4j
 @Component
 public class CacheClient {
@@ -61,7 +64,7 @@ public class CacheClient {
         return r;
     }
 
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = newFixedThreadPool(10);
 
     public <R,ID> R queryWithLogicalExpire(String keyPrefix, ID id, Class<R> type, Function<ID, R> dbFallback, Long time, TimeUnit unit){
         //1.从redis查询商铺缓存

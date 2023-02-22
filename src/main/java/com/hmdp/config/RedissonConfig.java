@@ -6,6 +6,9 @@ import org.redisson.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * @author Program Monkey
+ */
 @Configuration
 public class RedissonConfig {
     @Bean

@@ -69,7 +69,7 @@ public class UserInfo implements Serializable {
     private Integer credits;
 
     /**
-     * 会员级别，0~9级,0代表未开通会员
+     * 会员级别，0~9级,0级代表未开通会员
      */
     private Boolean level;
 
