@@ -54,7 +54,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     }
 
-    /*public Shop queryWithMutex(Long id){
+    public Shop queryWithMutex(Long id){
         //1.从redis查询商铺缓存
         String shopJson = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
         //2.判断是否存在
@@ -69,7 +69,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         //4.实现缓存重建
         //4.1获取互斥锁
         String lockKey = LOCK_SHOP_KEY + id;
-        Shop shop = null;
+        Shop shop;
         try {
             boolean isLock = tryLock(lockKey);
             //4.2判断是否获取成功
@@ -101,9 +101,9 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         return shop;
     }
 
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);*/
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
 
-    /*public Shop queryWithLogicalExpire(Long id){
+    public Shop queryWithLogicalExpire(Long id){
         //1.从redis查询商铺缓存
         String shopJson = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
         //2.判断是否存在
@@ -141,19 +141,18 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         }
         //6.4.返回过期的商铺信息
         return shop;
-    }*/
-
-    /*public Shop queryWithPassThrough(Long id){
+    }
+    public Shop queryWithPassThrough(Long id){
         //1.从redis查询商铺缓存
         String shopJson = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
         //2.判断是否存在
         if(StrUtil.isNotBlank(shopJson)){
             //3.存在，直接返回
-            Shop shop = JSONUtil.toBean(shopJson, Shop.class);
-            return shop;
+            return JSONUtil.toBean(shopJson, Shop.class);
         }
         //判断是否为空值
         if(shopJson != null){
+            //这里的意思是判断为空值，空值不是null，而是""
             return null;
         }
         //4.不存在，根据id查询数据库
@@ -168,16 +167,16 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         stringRedisTemplate.opsForValue().set(CACHE_SHOP_KEY + id, JSONUtil.toJsonStr(shop), CACHE_SHOP_TTL, TimeUnit.MINUTES);
         //7.返回
         return shop;
-    }*/
+    }
 
-    /*private boolean tryLock(String key){
+    private boolean tryLock(String key){
         Boolean flag = stringRedisTemplate.opsForValue().setIfAbsent(key, "1", LOCK_SHOP_TTL, TimeUnit.SECONDS);
         return BooleanUtil.isTrue(flag);
     }
 
     private void unlock(String key){
         stringRedisTemplate.delete(key);
-    }*/
+    }
 
     public void savaShop2Redis(Long id, Long expireSeconds) throws InterruptedException {
         //1.查询店铺数据
