@@ -11,9 +11,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.hmdp.utils.RedisConstants.LOGIN_USER_KEY;
-import static com.hmdp.utils.RedisConstants.LOGIN_USER_TTL;
-
 /**
  * @author Program Monkey
  */
@@ -31,7 +28,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
             return true;
         }
         //基于token获取redis中的用户
-        Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(LOGIN_USER_KEY + token);
+        Map<Object, Object> userMap = stringRedisTemplate.opsForHash().entries(RedisConstants.LOGIN_USER_KEY + token);
         //判断用户是否存在
         if(userMap.isEmpty()){
             return true;
@@ -41,7 +38,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor {
         //存在，保存用户信息到threadLocal
         UserHolder.saveUser(userDTO);
         //刷新token有效期
-        stringRedisTemplate.expire(LOGIN_USER_KEY + token, LOGIN_USER_TTL, TimeUnit.SECONDS);
+        stringRedisTemplate.expire(RedisConstants.LOGIN_USER_KEY + token, RedisConstants.LOGIN_USER_TTL, TimeUnit.SECONDS);
         //放行
         return true;
     }

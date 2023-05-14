@@ -26,8 +26,6 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 
 import static java.util.concurrent.Executors.*;
@@ -37,8 +35,8 @@ import static java.util.concurrent.Executors.*;
  *  服务实现类
  * </p>
  *
- * @author 虎哥
- * @since 2021-12-22
+ * @author Program Monkey
+ *
  */
 @Slf4j
 @Service
@@ -71,6 +69,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             while(true){
                 try {
                     //1.获取消息队列中的订单信息
+                    //XREADGROUP GROUP g1 c1 COUNT 1 BLOCK 2000 stream.orders >
                     List<MapRecord<String, Object, Object>> list = stringRedisTemplate.opsForStream().read(
                             Consumer.from("g1", "c1"),
                             StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)),
@@ -86,7 +85,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     VoucherOrder voucherOrder = BeanUtil.fillBeanWithMap(values, new VoucherOrder(), true);
                     //3.创建订单
                     handleVoucherOrder(voucherOrder);
-                    //4.ACK确认
+                    //4.ACK确认 SACK stream.orders g1 id
                     stringRedisTemplate.opsForStream().acknowledge(queueName, "g1", record.getId());
                 }catch (Exception e){
                     log.error("处理订单异常",e);
@@ -105,7 +104,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                     );
                     //2.判断消息获取是否成功
                     if(list == null || list.isEmpty()) {
-                        //2.1 如果获取失败，说明没有信息，继续下一次循环
+                        //2.1 如果获取失败，说明没有信息，结束循环
                         break;
                     }
                     MapRecord<String, Object, Object> record = list.get(0);
@@ -145,19 +144,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     }*/
 
     private void handleVoucherOrder(VoucherOrder voucherOrder) {
-        RLock lock = redissonClient.getLock("order:" + voucherOrder.getUserId());
-        boolean isLock = lock.tryLock();
-        if(!isLock){
-            //获取锁失败，返回错误或者重试
-            log.error("不允许重复下单");
-            return;
-        }
-        try {
-            proxy.createVoucherOrder(voucherOrder);
-        } finally {
-            lock.unlock();
-        }
-
+        proxy.createVoucherOrder(voucherOrder);
     }
     private IVoucherOrderService proxy;
     /**
@@ -170,7 +157,11 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         Long userId = UserHolder.getUser().getId();
         long orderId = redisIdWorker.nextId("order");
         //执行lua脚本
-        Long result = stringRedisTemplate.execute(SECKILL_SCRIPT, Collections.emptyList(), voucherId.toString(), userId.toString(), String.valueOf(orderId));
+        Long result = stringRedisTemplate.execute(SECKILL_SCRIPT
+                , Collections.emptyList()
+                , voucherId.toString()
+                , userId.toString()
+                , String.valueOf(orderId));
         //判断结果是否为0
         int r = result.intValue();
         if(r != 0){
@@ -202,7 +193,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         orderTasks.add(voucherOrder);
         //获取代理对象
         proxy = (IVoucherOrderService) AopContext.currentProxy();
-        return Result.ok(orderId);
+         return Result.ok(orderId);
     }*/
 
     /*@Override
@@ -254,14 +245,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     */
     @Transactional
     public void createVoucherOrder(VoucherOrder voucherOrder) {
-        //5.一人一单
-        Long userId = voucherOrder.getUserId();
-
-        int count = query().eq("voucher_id", voucherOrder.getVoucherId()).eq("user_id", userId).count();
-        if (count > 0) {
-            log.error("用户已经购买过一次了");
-            return;
-        }
         //6.扣减库存
         boolean success = seckillVoucherService
                 .update()
@@ -275,6 +258,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return;
         }
         //7.创建订单
-        save(voucherOrder);
+        // save(voucherOrder);
     }
 }

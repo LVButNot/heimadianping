@@ -19,6 +19,9 @@ public class MvcConfig implements WebMvcConfigurer {
     private StringRedisTemplate stringRedisTemplate;
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate))
+                .addPathPatterns("/**")
+                .order(0);
         registry.addInterceptor(new LoginInterceptor())
                 .excludePathPatterns(
                         "/user/code",
@@ -29,6 +32,6 @@ public class MvcConfig implements WebMvcConfigurer {
                         "/upload/**",
                         "/voucher/**"
                 ).order(1);
-        registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate)).addPathPatterns("/**").order(0);
+
     }
 }

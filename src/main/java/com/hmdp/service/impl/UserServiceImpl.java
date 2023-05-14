@@ -17,7 +17,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
-import javax.servlet.http.HttpSession;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -31,8 +30,8 @@ import static com.hmdp.utils.SystemConstants.USER_NICK_NAME_PREFIX;
  * 服务实现类
  * </p>
  *
- * @author 虎哥
- * @since 2021-12-22
+ * @author Program Monkey
+ *
  */
 @Service
 @Slf4j

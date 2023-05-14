@@ -21,8 +21,8 @@ import static com.hmdp.utils.RedisConstants.SECKILL_STOCK_KEY;
  *  服务实现类
  * </p>
  *
- * @author 虎哥
- * @since 2021-12-22
+ * @author Program Monkey
+ *
  */
 @Service
 public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> implements IVoucherService {
@@ -41,7 +41,7 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
 
     @Override
     @Transactional
-    public void addSeckillVoucher(Voucher voucher) {
+    public void  addSeckillVoucher(Voucher voucher) {
         // 保存优惠券
         save(voucher);
         // 保存秒杀信息
@@ -53,6 +53,5 @@ public class VoucherServiceImpl extends ServiceImpl<VoucherMapper, Voucher> impl
         seckillVoucherService.save(seckillVoucher);
         // 保存秒杀库存到redis中
         stringRedisTemplate.opsForValue().set(SECKILL_STOCK_KEY + voucher.getId(), voucher.getStock().toString());
-
     }
 }

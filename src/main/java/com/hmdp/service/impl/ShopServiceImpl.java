@@ -19,18 +19,18 @@ import javax.annotation.Resource;
 
 import java.time.LocalDateTime;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static com.hmdp.utils.RedisConstants.*;
+import static java.util.concurrent.Executors.*;
 
 /**
  * <p>
  *  服务实现类
  * </p>
  *
- * @author 虎哥
- * @since 2021-12-22
+ * @author Program Monkey
+ *
  */
 @Service
 public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IShopService {
@@ -42,7 +42,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
     @Override
     public Result queryById(Long id) {
         //缓存穿透
-        //Shop shop = cacheClient.queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
+        //Shop shop1 = cacheClient.queryWithPassThrough(CACHE_SHOP_KEY, id, Shop.class, this::getById, CACHE_SHOP_TTL, TimeUnit.MINUTES);
 
         //互斥锁解决缓存击穿
         //Shop shop = queryWithMutex(id);
@@ -63,7 +63,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
             return JSONUtil.toBean(shopJson, Shop.class);
         }
         //判断是否为空值
-        if(shopJson != null){
+        if("".equals(shopJson)){
             return null;
         }
         //4.实现缓存重建
@@ -79,6 +79,11 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
                 return queryWithMutex(id);
             }
             //4.4成功，根据id查询数据库
+            //获取锁成功应该再次检测Redis缓存是否存在，做DoubleCheck，如果存在则无需重建缓存。
+            String shopJson2 = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
+            if(StrUtil.isNotBlank(shopJson2)){
+                return JSONUtil.toBean(shopJson2, Shop.class);
+            }
             shop = getById(id);
             //模拟重建延时
             Thread.sleep(200);
@@ -101,7 +106,7 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         return shop;
     }
 
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR = Executors.newFixedThreadPool(10);
+    private static final ExecutorService CACHE_REBUILD_EXECUTOR = newFixedThreadPool(10);
 
     public Shop queryWithLogicalExpire(Long id){
         //1.从redis查询商铺缓存
@@ -127,10 +132,21 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
         boolean isLock = tryLock(lockKey);
         //6.2.判断获取是否成功
         if(isLock){
+            //获取锁成功后应该再次检测Redis缓存是否过期，做DoubleCheck，如果没过期则无需重建缓存。
+            String shopJson2 = stringRedisTemplate.opsForValue().get(CACHE_SHOP_KEY + id);
+            if(StrUtil.isBlank(shopJson2)){
+                return null;
+            }
+            RedisData redisData2 = JSONUtil.toBean(shopJson2, RedisData.class);
+            Shop shop2 = JSONUtil.toBean((JSONObject) redisData2.getData(), Shop.class);
+            LocalDateTime expireTime2 = redisData.getExpireTime();
+            if (expireTime2.isAfter(LocalDateTime.now())) {
+                return shop2;
+            }
             //6.3.成功，开启独立线程，实现缓存重建
             CACHE_REBUILD_EXECUTOR.submit(() ->{
                 try {
-                    savaShop2Redis(id, 20L);
+                    savaShop2Redis(id, 1800L);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }finally {
